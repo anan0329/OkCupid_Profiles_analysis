@@ -1,4 +1,4 @@
-packages = c("sparklyr", "ggplot2", "dbplot", "dplyr", "ggmosaic", "forcats", "tidyr")
+packages = c("sparklyr", "ggplot2", "dbplot", "dplyr", "purrr", "ggmosaic", "forcats", "tidyr")
 
 package.check <- lapply(
   packages, 
