@@ -15,7 +15,8 @@ okc <- spark_read_csv(
   mutate(
     height = as.numeric(height),
     income = ifelse(income == "-1", NA, as.numeric(income))
-  ) %>%
+  ) %>% 
+  mutate(body_type = ifelse(is.na(body_type), "missing", sex)) %>%
   mutate(sex = ifelse(is.na(sex), "missing", sex)) %>%
   mutate(drinks = ifelse(is.na(drinks), "missing", drinks)) %>%
   mutate(drugs = ifelse(is.na(drugs), "missing", drugs)) %>%
@@ -39,3 +40,41 @@ ethnic_vars <- ethnic %>%
 okc_train <- okc_train %>%
   mutate(scaled_age = (age - !!scale_values$mean_age) / !!scale_values$sd_age) %>% 
   mutate(!!!ethnicity_vars)
+
+vfolds <- sdf_random_split(okc_train, weights = purrr::set_names(rep(0.1, 10), paste0("fold", 1:10)), seed = 420)
+
+make_scale_age <- function(tr_ana) {
+  scale_values <- tr_ana %>%
+    summarize(
+      mean_age = mean(age),
+      sd_age = sd(age)
+    ) %>%
+    collect()
+  
+  function(data) {
+    mutate(data, scaled_age = (age - !!scale_values$mean_age) / !!scale_values$sd_age)
+  }
+}
+         
+cv_results <- purrr::map_df(1:10, function(v) {
+  tr_ana <- do.call(rbind, vfolds[setdiff(1:10, v)]) %>% compute()
+  val_ana <- vfolds[[v]]
+  
+  scale_age <- make_scale_age(tr_ana)
+  re_set <- scale_age(tr_ana)
+  val_set <- scale_age(val_ana)
+  
+  model <- ml_logistic_regression(
+    analysis_set, not_working ~ scaled_age + sex + drinks + drugs + essay_length
+  )
+  s <- ml_evaluate(model, assessment_set)
+  roc_df <- s$roc() %>% 
+    collect()
+  auc <- s$area_under_roc()
+  
+  tibble(
+    Resample = paste0("Fold", stringr::str_pad(v, width = 2, pad = "0")),
+    roc_df = list(roc_df),
+    auc = auc
+  )
+})
