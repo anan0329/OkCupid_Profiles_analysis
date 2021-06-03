@@ -78,3 +78,5 @@ cv_results <- purrr::map_df(1:10, function(v) {
     auc = auc
   )
 })
+
+spark_disconnect_all()
