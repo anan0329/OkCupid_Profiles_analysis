@@ -30,11 +30,11 @@ scale_values <- okc_train %>%
   summarize(mean_age = mean(age), sd_age = sd(age)) %>%
   collect()
 
-ethnicities <- c("asian", "middle eastern", "black", "native american", "indian", 
+ethnic <- c("asian", "middle eastern", "black", "native american", "indian", 
                  "pacific islander", "hispanic / latin", "white", "other")
-ethnicity_vars <- ethnicities %>% 
-  purrr::map(~ expr(ifelse(like(ethnicity, !!.x), 1, 0))) %>%
-  purrr::set_names(paste0("ethnicity_", gsub("\\s|/", "_", ethnicities)))
+ethnic_vars <- ethnic %>% 
+  purrr::map(~ expr(ifelse(like(ethnic, !!.x), 1, 0))) %>%
+  purrr::set_names(paste0("ethnic_", gsub("\\s|/", "_", ethnic)))
 
 okc_train <- okc_train %>%
   mutate(scaled_age = (age - !!scale_values$mean_age) / !!scale_values$sd_age) %>% 
